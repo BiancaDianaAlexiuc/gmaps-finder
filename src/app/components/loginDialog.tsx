@@ -19,7 +19,7 @@ const LoginDialog = forwardRef<HTMLDialogElement>((props, dialogRef) => {
 
   return (
     <dialog ref={dialogRef} className="modal">
-      <div className="modal-box  w-full max-w-6xl h-full max-h-[800px]">
+      <div className="modal-box  w-full md:max-w-4xl h-full max-h-[800px]">
         <form method="dialog">
           <button className="btn btn-md btn-square btn-outline  absolute right-2 top-2 text-black text-2xl">
             <svg
@@ -39,9 +39,9 @@ const LoginDialog = forwardRef<HTMLDialogElement>((props, dialogRef) => {
           </button>
         </form>
 
-        <div className="flex h-full">
+        <div className="flex h-full w-full">
           <div
-            className="w-1/2 h-full rounded-lg"
+            className="md:w-1/2 h-full rounded-lg hidden md:block w-full"
             style={{
               backgroundImage: `url(/assets/images/travelAI-bus.webp)`,
               backgroundSize: "cover",
@@ -50,7 +50,7 @@ const LoginDialog = forwardRef<HTMLDialogElement>((props, dialogRef) => {
             }}
           ></div>
 
-          <div className="w-1/2 h-full p-6 flex flex-col justify-center">
+          <div className="md:w-1/2 h-full p-6 flex flex-col justify-center w-full">
             {!isRegisterview ? (
               <LoginForm handleEnableRegisterView={handleEnableRegisterView} />
             ) : (

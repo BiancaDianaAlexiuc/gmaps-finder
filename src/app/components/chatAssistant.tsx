@@ -18,6 +18,7 @@ const ChatAssistant = () => {
     },
   ]);
   const [showTooltip, setShowTooltip] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const showTimer = setTimeout(() => {
@@ -40,16 +41,37 @@ const ChatAssistant = () => {
   };
 
   const sendMessage = async () => {
-    const msg: any = [...messages, { content: input, role: "user" }];
-    setMessages(msg);
-    setInput("");
+    if (!input.trim()) {
+      console.log("Empty input, not sending to API");
+      return;
+    }
 
-    const response: Message[] = await getOpenAIResponse(msg);
-    setMessages([...msg, { content: response, role: "assistant" }]);
+    const newMessage: Message = { content: input, role: "user" };
+    const updatedMessages = [...messages, newMessage];
+    setMessages(updatedMessages);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const response: string = await getOpenAIResponse(newMessage);
+      setMessages([
+        ...updatedMessages,
+        { content: response, role: "assistant" },
+      ]);
+    } catch (error) {
+      console.error("Error fetching OpenAI response:", error);
+      setMessages([
+        ...updatedMessages,
+        { content: "Error occurred, please try again.", role: "assistant" },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getOpenAIResponse = async (userInput: string) => {
+  const getOpenAIResponse = async (userInput: Message): Promise<string> => {
     try {
+      console.log("Sending input to API:", userInput);
       const response = await fetch("/api/openai", {
         method: "POST",
         headers: {
@@ -63,11 +85,22 @@ const ChatAssistant = () => {
       }
 
       const data = await response.json();
-      return data.output;
+      console.log("Received response from API:", data);
+      return data.output || "Sorry, I do not understand.";
     } catch (error) {
       console.error("Error fetching OpenAI response:", error);
       throw error;
     }
+  };
+
+  const resetConversation = () => {
+    setMessages([
+      {
+        role: "assistant",
+        content:
+          "👋 Hi! I am your assistant, ask me anything about Travel AI Planner!",
+      },
+    ]);
   };
 
   return (
@@ -75,7 +108,7 @@ const ChatAssistant = () => {
       <div className="fixed bottom-5 right-5 z-50 cursor-pointer">
         {showTooltip && !isOpen && (
           <div className="absolute bottom-14 right-0 mb-2 w-48 text-white text-sm rounded-lg p-2 shadow-lg chat chat-end">
-            <div className="chat-bubble bg-orange-700">
+            <div className="chat-bubble bg-orange-700 font-bold">
               Hi there! How can I help you?
             </div>
           </div>
@@ -121,25 +154,53 @@ const ChatAssistant = () => {
                 </div>
               </div>
             ))}
+            {loading && (
+              <div className="flex justify-center mt-4">
+                <span className="loading loading-dots loading-lg  bg-orange-400 "></span>
+                {/* <div className="loader border-t-transparent border-solid border-4 border-orange-400 rounded-full w-7 h-7 animate-spin"></div> */}
+              </div>
+            )}
           </div>
-          <div className="p-3 border-t flex items-center">
+          <div className="p-3 border-t flex items-center ">
             <input
               type="text"
               value={input}
               onChange={(e: ChangeEvent<HTMLInputElement>) =>
                 setInput(e.target.value)
               }
-              className="input input-bordered w-full mr-2"
+              className="input input-bordered w-full mr-2 input-warning text-black "
               placeholder="Type a message..."
             />
-            <button onClick={sendMessage} className="btn bg-transparent">
+            <button
+              onClick={sendMessage}
+              className="btn bg-transparent hover:bg-orange-400 text-black hover:text-white"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
-                fill="fill-grey-200"
+                fill="currentColor"
                 className="size-6"
               >
                 <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+              </svg>
+            </button>
+            <button
+              onClick={resetConversation}
+              className="btn hover:bg-orange-400 bg-transparent text-black hover:text-white ml-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="size-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+                />
               </svg>
             </button>
           </div>

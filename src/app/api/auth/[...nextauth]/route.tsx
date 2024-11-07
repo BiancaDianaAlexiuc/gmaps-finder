@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Facebook from "next-auth/providers/facebook";
 import Google from "next-auth/providers/google";
+import { signIn } from "next-auth/react";
 
 const options = {
   providers: [
@@ -15,8 +16,8 @@ const options = {
   ],
 
   // callbacks: {
-  //   async redirect({ url, baseUrl }: any) {
-  //     return url.startsWith(baseUrl) ? url : `${baseUrl}/dashboard`;
+  //   async signIn({ user, account, profile }: any) {
+  //     const isNewUser = await checkIfUserExists(user.email);
   //   },
   // },
 };

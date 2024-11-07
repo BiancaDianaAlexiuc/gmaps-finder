@@ -1,24 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 import axios from "axios";
 
 const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
 
+// Define custom responses
+const customResponses: Record<string, string> = {
+  "how can i login?":
+    "To log in, click the Get Started button on the center and choose from social media login (Facebook / Google) or with email and password.",
+  "how to login?":
+    "To log in, click the Get Started button on the center and choose from social media login (Facebook / Google) or with email and password.",
+};
+
 export async function POST(req: NextRequest) {
   try {
-    const { input }: any = await req.json();
+    const requestBody = await req.json();
+    const input = requestBody?.input;
 
-    if (!input) {
-      return NextResponse.json({ error: "No input provided" }, { status: 400 });
+    if (
+      !input ||
+      typeof input !== "object" ||
+      input.role !== "user" ||
+      typeof input.content !== "string" ||
+      !input.content.trim()
+    ) {
+      console.log("Invalid input received:", input);
+      return NextResponse.json(
+        {
+          error:
+            "Invalid input: Input should be an object with a non-empty content string.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const normalizedContent = input.content.toLowerCase().trim();
+
+    const customResponse = customResponses[normalizedContent];
+    if (customResponse) {
+      return NextResponse.json({ output: customResponse });
     }
 
     const response = await axios.post(
       "https://api.openai.com/v1/chat/completions",
       {
-        messages: input,
+        messages: [{ role: "user", content: input.content }],
         max_tokens: 50,
-        model: "gpt-3.5-turbo",
-        temperature: 1,
+        model: "gpt-4",
       },
       {
         headers: {
