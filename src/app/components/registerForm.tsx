@@ -1,34 +1,78 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { auth } from "../lib/firebaseConfig";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+} from "firebase/auth";
+
+type Inputs = {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+};
 
 const RegisterForm = ({ handleDisableRegisterView }: any) => {
+  const { data: session } = useSession();
+
+  const params = useSearchParams();
+  const router = useRouter();
+  let callbackUrl = params.get("callbackUrl") || "/";
+
+  const {
+    register,
+    handleSubmit,
+    getValues,
+    formState: { errors, isSubmitting },
+  } = useForm<Inputs>({
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  useEffect(() => {
+    if (session && session.user) {
+      router.push(callbackUrl);
+    }
+  }, [callbackUrl, params, router, session]);
+
+  const formSubmit: SubmitHandler<Inputs> = async (form) => {
+    const { name, email, password } = form;
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      await sendEmailVerification(userCredential.user);
+
+      alert(
+        "Registration successful! Please check your email to verify your account."
+      );
+
+      handleDisableRegisterView();
+    } catch (error) {
+      console.error("Error during registration:", error);
+      alert("Error during registration: " + error);
+    }
+  };
+
   return (
     <>
-      <h3 className="font-bold text-2xl mb-4 text-black">Register with </h3>
-      <div className="flex justify-center space-x-4 mt-4">
-        <button
-          className="btn btn-circle btn-outline w-16 h-16"
-          onClick={() => signIn("facebook", { callbackUrl: "/dashboard" })}
-        >
-          <img
-            src="/assets/icons/facebook.png"
-            alt="Facebook"
-            className="w-14 h-14"
-          />
-        </button>
-        <button className="btn btn-circle btn-outline w-16 h-16">
-          <img
-            src="/assets/icons/google.png"
-            alt="Google"
-            className="w-20 h-18"
-          />
-        </button>
-      </div>
+      <h3 className="font-bold text-2xl mb-4 text-black">Create an account </h3>
 
-      <div className="divider text-black">OR</div>
-
-      <form action="">
+      <form onSubmit={handleSubmit(formSubmit)}>
         <label className="input input-bordered flex items-center gap-2 mb-6 text-black">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -39,7 +83,34 @@ const RegisterForm = ({ handleDisableRegisterView }: any) => {
             <path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v.793c.026.009.051.02.076.032L7.674 8.51c.206.1.446.1.652 0l6.598-3.185A.755.755 0 0 1 15 5.293V4.5A1.5 1.5 0 0 0 13.5 3h-11Z" />
             <path d="M15 6.954 8.978 9.86a2.25 2.25 0 0 1-1.956 0L1 6.954V11.5A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5V6.954Z" />
           </svg>
-          <input type="text" className="grow text-black" placeholder="Email" />
+          <input
+            type="text"
+            className="grow text-black"
+            placeholder="Name"
+            {...register("name", { required: "Name is required" })}
+          />
+          {errors.name && <p className="text-red-500">{errors.name.message}</p>}
+        </label>
+
+        <label className="input input-bordered flex items-center gap-2 mb-6 text-black">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            className="h-4 w-4 opacity-70"
+          >
+            <path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v.793c.026.009.051.02.076.032L7.674 8.51c.206.1.446.1.652 0l6.598-3.185A.755.755 0 0 1 15 5.293V4.5A1.5 1.5 0 0 0 13.5 3h-11Z" />
+            <path d="M15 6.954 8.978 9.86a2.25 2.25 0 0 1-1.956 0L1 6.954V11.5A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5V6.954Z" />
+          </svg>
+          <input
+            type="text"
+            className="grow text-black"
+            placeholder="Email"
+            {...register("email", { required: "Email is required" })}
+          />
+          {errors.email && (
+            <p className="text-red-500">{errors.email.message}</p>
+          )}
         </label>
 
         <label className="input input-bordered flex items-center gap-2 mb-6 text-black">
@@ -55,7 +126,15 @@ const RegisterForm = ({ handleDisableRegisterView }: any) => {
               clipRule="evenodd"
             />
           </svg>
-          <input type="password" className="grow" placeholder="Password" />
+          <input
+            type="password"
+            className="grow"
+            placeholder="Password"
+            {...register("password", { required: "Password is required" })}
+          />
+          {errors.password && (
+            <p className="text-red-500">{errors.password.message}</p>
+          )}
         </label>
 
         <label className="input input-bordered flex items-center gap-2 mb-6 text-black">
@@ -71,10 +150,28 @@ const RegisterForm = ({ handleDisableRegisterView }: any) => {
               clipRule="evenodd"
             />
           </svg>
-          <input type="password" className="grow" placeholder="Re-Password" />
+          <input
+            type="password"
+            className="grow"
+            placeholder="Re-Password"
+            {...register("confirmPassword", {
+              required: "Please confirm your password",
+              validate: (value) =>
+                value === getValues("password") || "Passwords do not match",
+            })}
+          />
+          {errors.confirmPassword && (
+            <p className="text-red-500">{errors.confirmPassword.message}</p>
+          )}
         </label>
+        <button
+          type="submit"
+          className="btn btn-outline mb-6 w-full"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Registering..." : "Register"}
+        </button>
       </form>
-      <button className="btn btn-outline mb-6">Register</button>
 
       <p className="mb-6 text-black">
         Already have an account?{" "}
