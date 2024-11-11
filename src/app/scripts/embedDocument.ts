@@ -4,7 +4,7 @@ dotenv.config();
 import { Pinecone } from "@pinecone-database/pinecone";
 import axios from "axios";
 
-const PINECONE_API_KEY = process.env.NEXT_PUBLIC_PINECONE_API_KEY || "";
+const PINECONE_API_KEY = process.env.PINECONE_API_KEY || "";
 const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY || "";
 const PINECONE_INDEX_NAME = "gmaps-finder";
 const PINECONE_ENVIRONMENT = "us-east-1";
