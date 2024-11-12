@@ -2,6 +2,8 @@
 
 import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
+import { MapProvider } from "../providers/map-provider";
+import MapComponent from "../components/map";
 
 export default function Home() {
   // let bgImg = "/assets/images/travelAI.webp";
@@ -34,8 +36,10 @@ export default function Home() {
                   alt="Tailwind CSS Navbar component"
                   src={
                     session?.user?.image ||
-                    "https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"
+                    "/assets/images/user-placeholder.webp"
                   }
+                  width={40}
+                  height={40}
                 />
               </div>
             </div>
@@ -63,21 +67,12 @@ export default function Home() {
       </div>
 
       {/* Main content */}
-      <div
-        className="hero min-h-screen"
-        style={
-          {
-            // backgroundImage: `url(${bgImg})`,
-            // backgroundSize: "cover",
-            // backgroundRepeat: "no-repeat",
-            // backgroundPosition: "center",
-            // backgroundColor: "white",
-          }
-        }
-      >
-        <div className="hero-content text-neutral-content text-center">
-          <div className="max-w-2xl">
-            <h1 className="mb-6 text-6xl font-bold">Dashboard page here</h1>
+      <div className="hero min-h-screen w-full">
+        <div className="hero-content text-neutral-content text-center w-full">
+          <div className="w-full">
+            <MapProvider>
+              <MapComponent />
+            </MapProvider>
           </div>
         </div>
       </div>

@@ -142,8 +142,10 @@ const ChatAssistant = () => {
                   <div className="chat-image avatar">
                     <div className="w-10 rounded-full">
                       <Image
-                        src="https://i.ibb.co/DrJKGbK/DALL-E-2024-10-18-14-51-30-A-modern-and-minimalistic-app-icon-for-a-travel-AI-planner-app-The-icon-s.png"
+                        src="/assets/icons/logo.webp"
                         alt="Assistant Avatar"
+                        width={40}
+                        height={40}
                       />
                     </div>
                   </div>

@@ -5,6 +5,12 @@ const nextConfig = {
   //     // your project has ESLint errors.
   //     ignoreDuringBuilds: true,
   //   },
+  images: {
+    domains: [
+      "platform-lookaside.fbsbx.com", //facebook,
+      "lh3.googleusercontent.com", //google
+    ],
+  },
 };
 
 export default nextConfig;
