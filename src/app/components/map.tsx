@@ -78,7 +78,7 @@ const MapComponent = () => {
   };
 
   // on map load
-  const onMapLoad = (map: google.maps.Map) => {
+  const onMapLoad = () => {
     handleGetLocation();
   };
 
