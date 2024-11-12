@@ -1,7 +1,6 @@
 "use client";
 
 import { forwardRef, useState } from "react";
-import { signIn } from "next-auth/react";
 import LoginForm from "./loginForm";
 import RegisterForm from "./registerForm";
 
@@ -65,4 +64,5 @@ const LoginDialog = forwardRef<HTMLDialogElement>((props, dialogRef) => {
   );
 });
 
+LoginDialog.displayName = "LoginDialog";
 export default LoginDialog;

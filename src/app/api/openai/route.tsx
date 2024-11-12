@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { Pinecone } from "@pinecone-database/pinecone";
 
 const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
@@ -26,7 +26,7 @@ async function fetchRelevantChunks(query: string): Promise<string[]> {
     }
   );
 
-  const queryEmbedding = embeddingResponse.data.data[0].embedding;
+  const queryEmbedding: number[] = embeddingResponse.data.data[0].embedding;
 
   const queryResponse = await pineconeIndex.query({
     vector: queryEmbedding,
@@ -34,7 +34,13 @@ async function fetchRelevantChunks(query: string): Promise<string[]> {
     includeMetadata: true,
   });
 
-  return queryResponse.matches.map((match: any) => match.metadata.text);
+  return queryResponse.matches
+    .map((match) =>
+      match.metadata && "text" in match.metadata
+        ? match.metadata.text
+        : undefined
+    )
+    .filter((text): text is string => text !== undefined);
 }
 
 export async function POST(req: NextRequest) {
@@ -88,11 +94,15 @@ export async function POST(req: NextRequest) {
       "Sorry, I do not understand.";
 
     return NextResponse.json({ output });
-  } catch (error: any) {
-    console.error(
-      "Error occurred:",
-      error.response?.data || error.message || error
-    );
+  } catch (error: unknown) {
+    if (error instanceof AxiosError) {
+      console.error("Error occurred:", error.response?.data || error.message);
+    } else if (error instanceof Error) {
+      console.error("Error occurred:", error.message);
+    } else {
+      console.error("Error occurred:", error);
+    }
+
     return new NextResponse(
       JSON.stringify({ error: "Error processing request" }),
       { status: 500 }

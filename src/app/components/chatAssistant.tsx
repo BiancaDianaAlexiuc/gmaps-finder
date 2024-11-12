@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ChangeEvent, useEffect, useState } from "react";
 
 interface Message {
@@ -132,7 +133,7 @@ const ChatAssistant = () => {
       {isOpen && (
         <div className="fixed bottom-20 right-5 z-50 w-96 bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="p-4 h-100 overflow-y-auto">
-            {messages.map((message: any, index: any) => (
+            {messages.map((message: Message, index: number) => (
               <div
                 key={index}
                 className={`chat ${message.role === "assistant" ? "chat-start" : "chat-end"}`}
@@ -140,7 +141,7 @@ const ChatAssistant = () => {
                 {message.role === "assistant" && (
                   <div className="chat-image avatar">
                     <div className="w-10 rounded-full">
-                      <img
+                      <Image
                         src="https://i.ibb.co/DrJKGbK/DALL-E-2024-10-18-14-51-30-A-modern-and-minimalistic-app-icon-for-a-travel-AI-planner-app-The-icon-s.png"
                         alt="Assistant Avatar"
                       />

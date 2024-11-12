@@ -6,20 +6,24 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { auth } from "../lib/firebaseConfig";
+import Image from "next/image";
+
+interface LoginFormProps {
+  handleEnableRegisterView: () => void;
+}
 
 type Inputs = {
   email: string;
   password: string;
 };
 
-const LoginForm = ({ handleEnableRegisterView }: any) => {
+const LoginForm: React.FC<LoginFormProps> = ({ handleEnableRegisterView }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
 
   const {
     register,
     handleSubmit,
-    getValues,
     formState: { errors },
   } = useForm<Inputs>({
     defaultValues: {
@@ -34,7 +38,7 @@ const LoginForm = ({ handleEnableRegisterView }: any) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push("/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
       setErrorMessage("Invalid email or password. Please try again.");
     }
@@ -48,9 +52,11 @@ const LoginForm = ({ handleEnableRegisterView }: any) => {
           className="btn btn-circle btn-outline w-16 h-16"
           onClick={() => signIn("facebook", { callbackUrl: "/dashboard" })}
         >
-          <img
+          <Image
             src="/assets/icons/facebook.png"
             alt="Facebook"
+            width={14}
+            height={14}
             className="w-14 h-14"
           />
         </button>
@@ -58,8 +64,10 @@ const LoginForm = ({ handleEnableRegisterView }: any) => {
           className="btn btn-circle btn-outline w-16 h-16"
           onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
         >
-          <img
+          <Image
             src="/assets/icons/google.png"
+            width={20}
+            height={18}
             alt="Google"
             className="w-20 h-18"
           />

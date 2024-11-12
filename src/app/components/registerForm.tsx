@@ -3,13 +3,17 @@
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { auth } from "../lib/firebaseConfig";
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
 } from "firebase/auth";
+
+interface RegisterFormProps {
+  handleDisableRegisterView: () => void;
+}
 
 type Inputs = {
   name: string;
@@ -18,12 +22,14 @@ type Inputs = {
   confirmPassword: string;
 };
 
-const RegisterForm = ({ handleDisableRegisterView }: any) => {
+const RegisterForm: React.FC<RegisterFormProps> = ({
+  handleDisableRegisterView,
+}) => {
   const { data: session } = useSession();
 
   const params = useSearchParams();
   const router = useRouter();
-  let callbackUrl = params.get("callbackUrl") || "/";
+  const callbackUrl = params.get("callbackUrl") || "/";
 
   const {
     register,
@@ -46,7 +52,7 @@ const RegisterForm = ({ handleDisableRegisterView }: any) => {
   }, [callbackUrl, params, router, session]);
 
   const formSubmit: SubmitHandler<Inputs> = async (form) => {
-    const { name, email, password } = form;
+    const { email, password } = form;
 
     try {
       const userCredential = await createUserWithEmailAndPassword(
@@ -62,7 +68,7 @@ const RegisterForm = ({ handleDisableRegisterView }: any) => {
       );
 
       handleDisableRegisterView();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error during registration:", error);
       alert("Error during registration: " + error);
     }

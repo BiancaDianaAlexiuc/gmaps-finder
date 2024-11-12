@@ -1,14 +1,13 @@
 "use client";
 
-import { useSession, signIn, signOut } from "next-auth/react";
-import { redirect } from "next/dist/server/api-utils";
-import { MouseEventHandler } from "react";
+import { useSession, signOut } from "next-auth/react";
+import Image from "next/image";
 
 export default function Home() {
-  let bgImg = "/assets/images/travelAI.webp";
+  // let bgImg = "/assets/images/travelAI.webp";
   const { data: session, status } = useSession();
 
-  const handleSignOut = (e: any) => {
+  const handleSignOut = (e: React.FormEvent) => {
     e.preventDefault();
     signOut({ callbackUrl: "/" });
   };
@@ -31,7 +30,7 @@ export default function Home() {
               className="btn btn-ghost btn-circle avatar"
             >
               <div className="w-10 rounded-full">
-                <img
+                <Image
                   alt="Tailwind CSS Navbar component"
                   src={
                     session?.user?.image ||
