@@ -1,85 +1,181 @@
 "use client";
 
-import { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   GoogleMap,
   Marker,
   Autocomplete,
-  DirectionsService,
-  DirectionsRenderer,
+  Polyline,
+  InfoWindow,
 } from "@react-google-maps/api";
 
 const MapComponent = () => {
-  //From the video
-  //   const [map, setMap] = useState<google.maps.Map | null>(null);
-  //   const [autocomplete, setAutocomplete] =
-  //     useState<google.maps.places.Autocomplete | null>(null);
-  const [selectedPlace, setSelectedPlace] =
-    useState<google.maps.places.PlaceResult | null>(null);
-  const [searchLngLat, setSearchLngLat] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
+
+  const [destination, setDestination] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  const [routePolyline, setRoutePolyline] = useState<string | null>(null);
+  const [travelInfo, setTravelInfo] = useState<{
+    distance: string | null;
+    duration: string | null;
+  }>({ distance: null, duration: null });
+
+  const [loading, setLoading] = useState(true);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  const [directions, setDirections] =
-    useState<google.maps.DirectionsResult | null>(null);
-  const [travelTime, setTravelTime] = useState<string | null>(null);
+  const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAP_API;
 
-  const directionsCallback = (
-    result: google.maps.DirectionsResult | null,
-    status: google.maps.DirectionsStatus
-  ) => {
-    if (result && status === "OK") {
-      setDirections(result);
-      const route = result.routes[0].legs[0];
-      setTravelTime(route.duration?.text || null);
-    } else {
-      console.error("Directions request failed due to " + status);
-    }
-  };
-
-  // static lat and lng
-  const center = { lat: 51.509865, lng: -0.118092 };
-
-  // handle place change on search
-  const handlePlaceChanged = () => {
-    const place = autocompleteRef.current?.getPlace();
-    if (place && place.geometry) {
-      setSelectedPlace(place);
-      setSearchLngLat({
-        lat: place.geometry.location?.lat() || 0,
-        lng: place.geometry.location?.lng() || 0,
-      });
-      setCurrentLocation(null);
-    }
-  };
-
-  // get current location
-  const handleGetLocation = () => {
+  useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const { latitude, longitude } = position.coords;
-          setSelectedPlace(null);
-          setSearchLngLat(null);
-          setCurrentLocation({ lat: latitude, lng: longitude });
+          setCurrentLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+          setLoading(false);
         },
         (error) => {
-          console.log(error);
+          console.error("Error getting current location:", error);
+          setLoading(false);
         }
       );
     } else {
-      console.log("Geolocation is not supported by this browser.");
+      console.error("Geolocation is not supported by this browser.");
+      setLoading(false);
+    }
+  }, []);
+
+  const handlePlaceChanged = () => {
+    const place = autocompleteRef.current?.getPlace();
+    if (place && place.geometry) {
+      setDestination({
+        lat: place.geometry.location?.lat() || 0,
+        lng: place.geometry.location?.lng() || 0,
+      });
     }
   };
 
-  // on map load
-  const onMapLoad = () => {
-    handleGetLocation();
+  useEffect(() => {
+    const fetchRoute = async () => {
+      if (currentLocation && destination) {
+        try {
+          const response = await fetch(
+            `https://routes.googleapis.com/directions/v2:computeRoutes?key=${GOOGLE_MAPS_API_KEY}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Goog-FieldMask":
+                  "routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline",
+              },
+              body: JSON.stringify({
+                origin: {
+                  location: {
+                    latLng: {
+                      latitude: currentLocation.lat,
+                      longitude: currentLocation.lng,
+                    },
+                  },
+                },
+                destination: {
+                  location: {
+                    latLng: {
+                      latitude: destination.lat,
+                      longitude: destination.lng,
+                    },
+                  },
+                },
+                travelMode: "DRIVE",
+              }),
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+
+            const route = data.routes[0];
+
+            setRoutePolyline(route.polyline.encodedPolyline);
+
+            const durationString = route.duration || "0s";
+            const durationSeconds = parseInt(
+              durationString.replace("s", ""),
+              10
+            );
+
+            const hours = Math.floor(durationSeconds / 3600);
+            const minutes = Math.ceil((durationSeconds % 3600) / 60);
+
+            const formattedDuration =
+              durationSeconds > 0
+                ? hours > 0
+                  ? `${hours} hrs ${minutes} mins`
+                  : `${minutes} mins`
+                : "Unavailable";
+
+            const distanceMeters = route.distanceMeters ?? 0;
+
+            setTravelInfo({
+              distance:
+                distanceMeters > 0
+                  ? `${(distanceMeters / 1000).toFixed(2)} km`
+                  : "Unavailable",
+              duration: formattedDuration,
+            });
+          } else {
+            console.error("Failed to fetch route:", response.statusText);
+          }
+        } catch (error) {
+          console.error("Error fetching route:", error);
+        }
+      }
+    };
+
+    fetchRoute();
+  }, [currentLocation, destination]);
+
+  const decodePolyline = (encoded: string) => {
+    const points = [];
+    let index = 0,
+      lat = 0,
+      lng = 0;
+
+    while (index < encoded.length) {
+      let b,
+        shift = 0,
+        result = 0;
+
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+
+      const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+
+      const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+      lng += dlng;
+
+      points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+    }
+
+    return points;
   };
 
   return (
@@ -92,60 +188,65 @@ const MapComponent = () => {
         gap: "20px",
       }}
     >
-      {/* search component  */}
-      <Autocomplete
-        onLoad={(autocomplete) => {
-          console.log("Autocomplete loaded:", autocomplete);
-          autocompleteRef.current = autocomplete;
-        }}
-        onPlaceChanged={handlePlaceChanged}
-        options={{ fields: ["address_components", "geometry", "name"] }}
-        className="w-full"
-      >
-        <input
-          type="text"
-          className="appearance-none block w-full py-3 px-4 leading-tight text-gray-700 bg-white focus:bg-white border border-gray-200 focus:border-gray-500 rounded focus:outline-none"
-          placeholder="Search for a location"
-        />
-      </Autocomplete>
-      {/* <span className="icon-[carbon--edit-off]">here</span> */}
+      {currentLocation && (
+        <Autocomplete
+          onLoad={(autocomplete) => {
+            autocompleteRef.current = autocomplete;
 
-      {/* map component  */}
-      <div className="w-full h-96 md:h-[60vh] lg:h-[70vh] max-w-7xl">
-        <GoogleMap
-          zoom={currentLocation || selectedPlace ? 18 : 12}
-          center={currentLocation || searchLngLat || center}
-          mapContainerClassName="w-full h-full"
-          //   mapContainerStyle={{
-          //     width: "1000px",
-          //     height: "1000px",
-          //     margin: "auto",
-          //   }}
-          onLoad={onMapLoad}
+            if (autocomplete) {
+              autocomplete.setOptions({
+                bounds: new google.maps.LatLngBounds(currentLocation),
+                strictBounds: false,
+              });
+            }
+          }}
+          onPlaceChanged={handlePlaceChanged}
+          className="w-full"
         >
-          {selectedPlace && searchLngLat && <Marker position={searchLngLat} />}
-          {currentLocation && <Marker position={currentLocation} />}
+          <input
+            type="text"
+            placeholder="Search for a destination"
+            className="appearance-none block w-full py-3 px-4 leading-tight text-gray-700 bg-white border border-gray-200 rounded focus:outline-none w-full"
+          />
+        </Autocomplete>
+      )}
 
-          {searchLngLat && currentLocation && (
-            <DirectionsService
-              options={{
-                destination: searchLngLat,
-                origin: currentLocation,
-                travelMode: google.maps.TravelMode.DRIVING,
-              }}
-              callback={directionsCallback}
-            />
-          )}
-          {directions && (
-            <DirectionsRenderer
-              options={{
-                directions: directions,
-              }}
-            />
-          )}
-        </GoogleMap>
+      <div className="w-full h-96 md:h-[60vh] lg:h-[70vh] max-w-7xl">
+        {loading ? (
+          <span className="loading loading-spinner loading-lg bg-orange-400 "></span>
+        ) : (
+          <GoogleMap
+            zoom={14}
+            center={currentLocation || { lat: 51.509865, lng: -0.118092 }}
+            mapContainerClassName="w-full h-full"
+          >
+            {currentLocation && <Marker position={currentLocation} />}
+            {destination && <Marker position={destination} />}
+            {routePolyline && (
+              <Polyline
+                path={decodePolyline(routePolyline)}
+                options={{
+                  strokeColor: "#FF0000",
+                  strokeOpacity: 0.8,
+                  strokeWeight: 5,
+                }}
+              />
+            )}
+            {destination && travelInfo.distance && travelInfo.duration && (
+              <InfoWindow position={destination}>
+                <div className="text-neutral">
+                  <p>
+                    <strong>Distance:</strong> {travelInfo.distance}
+                  </p>
+                  <p>
+                    <strong>Duration:</strong> {travelInfo.duration}
+                  </p>
+                </div>
+              </InfoWindow>
+            )}
+          </GoogleMap>
+        )}
       </div>
-      {travelTime && <p>Estimated travel time: {travelTime}</p>}
     </div>
   );
 };
